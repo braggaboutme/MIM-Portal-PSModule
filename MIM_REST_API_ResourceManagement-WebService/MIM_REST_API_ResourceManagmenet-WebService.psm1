@@ -1,6 +1,6 @@
 #########################################################################################################
 ##   
-##  MIM_Lithnet_API_Module version 0.2
+##  MIM_Lithnet_API_Module version 0.3
 ##  
 ##  For use with the Lithnet ResourceManagement-WebService
 ##  https://github.com/lithnet/resourcemanagement-webservice/

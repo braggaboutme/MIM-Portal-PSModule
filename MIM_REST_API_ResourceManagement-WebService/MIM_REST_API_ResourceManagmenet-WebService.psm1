@@ -1,6 +1,6 @@
 #########################################################################################################
 ##   
-##  MIM_Lithnet_API_Module version 0.3
+##  MIM_Lithnet_API_Module version 0.4
 ##  
 ##  For use with the Lithnet ResourceManagement-WebService
 ##  https://github.com/lithnet/resourcemanagement-webservice/
@@ -13,6 +13,7 @@
 ##  v0.2 - 2/24/2020 - Commented out the 'Audit' switch for all commands. Added a do until statement to parse through multiple pages within a large query. Fixed typos and bugs.
 ##                     Also added the Update-MIMObject commandlet
 ##  v0.3 - 2/25/2020 - Added Audit switch back into script
+##  v0.4 - 2/26/2020 - Corrected a typo and added an if statement before the while do loop
 ##
 ##  Audit mode is used to generate the full URL automatically without sending a REST call to the URL
 ##
@@ -47,10 +48,10 @@
 ##   Standalone Commands:
 ##
 ##   $creds = Set-MIMCredentials 
-##   $cbragg = Get-MIMUser -AccountName 'chris.bragg' -Credentials $creds -URL "https://mim.domain.com:8080" -Attributes DisplayName,AccountName,Department
-##   $AccountingUsers = Get-MIMUser -xpathquery "[(ends-with(DN, 'OU=Accounting,OU=Users,DC=DOMAIN,DC=COM'))]" -Credentials $creds -URL "https://mim.domain.com:8080" -Attributes DisplayName,AccountName,Department
-##   $ABCGroup = Get-MIMGroup -AccountName 'ABCGroup' -Credentials $creds -URL "https://mim.domain.com:8080" -Attributes DisplayName,Owner,Manually-ManagedMembership,DisplayedOwner
-##   $AccountingGroups = Get-MIMGroup -xpathquery "[(starts-with(DisplayName, 'Accounting-'))]" -Credentials $creds -URL "https://mim.domain.com:8080" -Attributes DisplayName,AccountName,Department
+##   $cbragg = Get-MIMUser -AccountName 'chris.bragg' -Credentials $creds -URL "https://mim.domain.com:8080" -Attributes 'DisplayName,AccountName,Department'
+##   $AccountingUsers = Get-MIMUser -xpathquery "[(ends-with(DN, 'OU=Accounting,OU=Users,DC=DOMAIN,DC=COM'))]" -Credentials $creds -URL "https://mim.domain.com:8080" -Attributes 'DisplayName,AccountName,Department'
+##   $ABCGroup = Get-MIMGroup -AccountName 'ABCGroup' -Credentials $creds -URL "https://mim.domain.com:8080" -Attributes 'DisplayName,Owner,DisplayedOwner'
+##   $AccountingGroups = Get-MIMGroup -xpathquery "[(starts-with(DisplayName, 'Accounting-'))]" -Credentials $creds -URL "https://mim.domain.com:8080" -Attributes 'DisplayName,AccountName,Department'
 ## 
 ##   Commands that are dependent on previous commands:
 ##
@@ -198,7 +199,8 @@ function Get-MIMUser
             $arraylist = [System.Collections.ArrayList]@()
             $arraylist.Add($users) | Out-Null
             $urlnextpage = $users.nextpage
-
+        if ($urlnextpage -ne $null)
+        {
         do
             {
             $users = Invoke-RestMethod -uri ($urlnextpage) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
@@ -207,11 +209,12 @@ function Get-MIMUser
             }
                       
         until ($urlnextpage -eq $null)
-        
-        $usersarray = $arraylist.results
-        return $usersarray
+        }
         
         
+            $usersarray = $arraylist.results
+            return $usersarray
+                
         }
         Else
         {
@@ -274,6 +277,20 @@ function Get-MIMUser
             {
             Write-host "Either credentials are bad or the URL is incorrect"
             }
+            catch [System.Security.Authentication.AuthenticationException]
+            {
+            Write-Host "The remote certificate is invalide according to the validation procedure."
+            }
+            catch [System.Net.WebException]
+            {
+            Write-Host "Could not establish trust relationship for the SSL/TLS secure channel."
+            }
+            #catch [System.Management.Automation.ParameterBindingValidationException]
+            #{
+            #Write-Host "The URL or xpath query is incorrect"
+            #}
+            
+
         return $group
         }
         
@@ -312,7 +329,8 @@ function Get-MIMUser
             $arraylist = [System.Collections.ArrayList]@()
             $arraylist.Add($groups) | Out-Null
             $urlnextpage = $groups.nextpage
-
+        if ($urlnextpage -ne $null)
+        {
         do
             {
             $groups = Invoke-RestMethod -uri ($urlnextpage) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
@@ -321,9 +339,11 @@ function Get-MIMUser
             }
                       
         until ($urlnextpage -eq $null)
+        }
         
-        $groupssarray = $arraylist.results
-        return $groupsarray
+     
+            $groupsarray = $arraylist.results
+            return $groupsarray
             
         }
         Else
@@ -369,6 +389,10 @@ function Get-MIMUser
             catch [System.Management.Automation.RuntimeException]
             {
             Write-host "Either credentials are bad or the URL is incorrect"
+            }
+            catch [System.Net.WebException]
+            {
+            Write-host "ERROR: Web Exception. The resource might be in an errored state."
             }
 
             return $user

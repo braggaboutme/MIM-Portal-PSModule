@@ -371,7 +371,7 @@ function Get-MIMUser
  )
     
     
-#$APIURLGroup = "https://mimrestapi.contoso.local:4431/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Owner/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
+#$APIURLGroup = "https://mim.domain.com:8080/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Owner/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
             $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Owner/$($UserObjectID)/"
             If ($Audit -eq "true")
             {
@@ -418,7 +418,7 @@ function Get-MIMUser
  )
     
     
-#$APIURLGroup = "https://mimrestapi.contoso.local:4431/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Owner/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
+#$APIURLGroup = "https://mim.domain.com:8080/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Owner/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
             $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Owner/$($UserObjectID)/"
             
             If ($Audit -eq "true")
@@ -462,7 +462,7 @@ function Get-MIMUser
  )
     
     
-#$APIURLGroup = "https://mimrestapi.contoso.local:4431/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Manually-ManagedMembership/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
+#$APIURLGroup = "https://mim.domain.com:8080/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Manually-ManagedMembership/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
             $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Manually-ManagedMembership/$($UserObjectID)/"
             If ($Audit -eq "true")
             {
@@ -505,7 +505,7 @@ function Get-MIMUser
  )
     
     
-#$APIURLGroup = "https://mimrestapi.contoso.local:4431/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Manually-ManagedMembership/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
+#$APIURLGroup = "https://mim.domain.com:8080/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Manually-ManagedMembership/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
             $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Manually-ManagedMembership/$($UserObjectID)/"
             If ($Audit -eq "true")
             {

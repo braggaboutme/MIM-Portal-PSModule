@@ -15,30 +15,30 @@
 ##  v0.3 - 2/25/2020 - Added Audit switch back into script
 ##  v0.4 - 2/26/2020 - Corrected a typo and added an if statement before the while do loop
 ##
-##  Audit mode is used to generate the full URL automatically without sending a REST call to the URL
+##  
 ##
 #########################################################################################################
 ##
 ##   Description of commands:
 ##
-##   Set-MIMCredentials      - This command is REQUIRED prior to running any other commands. Save the credentials as a variable (Ex: $creds) and pass that variable to the parameter '-Credentials' for each of the other commands  
-##   Get-MIMUser             - This command will get the 'person' object from MIM. By default, only specific attributes are returned, if additional attributes are needed, use the -Attributes switch
-##   Get-MIMGroup            - This command will get the 'group' object from MIM. By default, only specific attributes are returned, if additional attributes are needed, use the -Attributes switch
-##   Add-MIMMember           - This command will add a user as a member of a group. At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
-##   Remove-MIMMember        - This command will remove a user from the membership of a group. At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
-##   Add-MIMOwner            - This command will add a user as an owner of a group. This will not affect the "Displayed Owner". At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
-##   Remove-MIMOwner         - This command will remove a user from being an owner of a group. This will not affect the "Displayed Owner". At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
-##   Update-MIMObject        - This command will update a specific attribute on a specific object. You MUST specify the Attribute and AttributeValue switch
+##   Set-MIMCredentials (Required)  - This command is REQUIRED prior to running any other commands. Save the credentials as a variable (Ex: $creds) and pass that variable to the parameter '-Credentials' for each of the other commands  
+##   Get-MIMUser                    - This command will get the 'person' object from MIM. By default, only specific attributes are returned, if additional attributes are needed, use the -Attributes switch
+##   Get-MIMGroup                   - This command will get the 'group' object from MIM. By default, only specific attributes are returned, if additional attributes are needed, use the -Attributes switch
+##   Add-MIMMember                  - This command will add a user as a member of a group. At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
+##   Remove-MIMMember               - This command will remove a user from the membership of a group. At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
+##   Add-MIMOwner                   - This command will add a user as an owner of a group. This will not affect the "Displayed Owner". At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
+##   Remove-MIMOwner                - This command will remove a user from being an owner of a group. This will not affect the "Displayed Owner". At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
+##   Update-MIMObject               - This command will update a specific attribute on a specific object. You MUST specify the Attribute and AttributeValue switch
 ##
 ##   Switches:
 ##
-##  -Credentials      (Required)  - This switch is REQUIRED for all commands. You must pass the credentials to authenticate to MIM.
-##  -Audit            (Optional)  - The Audit switch is helpful when using another application to send REST calls to the Lithnet Web Service. When the '-Audit' switch is used, the URL is generated and displayed but no other commands are executed.
-##  -AccountName      (Optional)  - This switch is used to specify the AccountName of a resource.
-##  -URL              (Required)  - This URL is used to define the URL that the Lithnet Web Service is listening on. If you use a port other than 80 or 443, you must specify that in the URL value.
-##  -xpathquery       (Optional)  - This allows for the option of querying MIM objects with an xpath expression. This is used for advanced searches or for searches that return more than a single object.
-##  -Attributes       (Optional)  - This switch allows you to specify attributes that you would like returned. This is in addition to the default attributes.
-##  -AttributeValues  (Required)  - This switch is used with the Update-MIMObject command. This will allow you to specify the values of an attribute that you want to change.
+##  -Credentials       (Required)   - This switch is REQUIRED for all commands. You must pass the credentials to authenticate to MIM.
+##  -Audit             (Optional)   - The Audit switch is helpful when using another application to send REST calls to the Lithnet Web Service. When the '-Audit' switch is used, the URL is generated and displayed but no other commands are executed.
+##  -AccountName       (Optional)   - This switch is used to specify the AccountName of a resource.
+##  -URL               (Required)   - This URL is used to define the URL that the Lithnet Web Service is listening on. If you use a port other than 80 or 443, you must specify that in the URL value.
+##  -xpathquery        (Optional)   - This allows for the option of querying MIM objects with an xpath expression. This is used for advanced searches or for searches that return more than a single object.
+##  -Attributes        (Optional)   - This switch allows you to specify attributes that you would like returned. This is in addition to the default attributes.
+##  -AttributeValues   (Required)   - This switch is used with the Update-MIMObject command. This will allow you to specify the values of an attribute that you want to change.
 ##
 #########################################################################################################
 ##

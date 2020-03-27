@@ -14,7 +14,7 @@
 ##                     Also added the Update-MIMObject commandlet
 ##  v0.3 - 2/25/2020 - Added Audit switch back into script
 ##  v0.4 - 2/26/2020 - Corrected a typo and added an if statement before the while do loop
-##
+##  v0.5 - 3/27/2020 - Added a Get-MIMObject function to allow querying of custom objects
 ##  
 ##
 #########################################################################################################
@@ -29,6 +29,7 @@
 ##   Add-MIMOwner                   - This command will add a user as an owner of a group. This will not affect the "Displayed Owner". At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
 ##   Remove-MIMOwner                - This command will remove a user from being an owner of a group. This will not affect the "Displayed Owner". At this time, only the object ID's are supported. To get the object ID of the user and group, run Get-MIMUser and Get-MIMGroup
 ##   Update-MIMObject               - This command will update a specific attribute on a specific object. You MUST specify the Attribute and AttributeValue switch
+##   Get-MIMObject                  - This command will get any object from MIM when you specify the object type. Only works with xpath queries as of right now.
 ##
 ##   Switches:
 ##
@@ -39,6 +40,7 @@
 ##  -xpathquery        (Optional)   - This allows for the option of querying MIM objects with an xpath expression. This is used for advanced searches or for searches that return more than a single object.
 ##  -Attributes        (Optional)   - This switch allows you to specify attributes that you would like returned. This is in addition to the default attributes.
 ##  -AttributeValues   (Required)   - This switch is used with the Update-MIMObject command. This will allow you to specify the values of an attribute that you want to change.
+##  -ObjectType        (Required)   - Only available in Get-MIMObject command.
 ##
 #########################################################################################################
 ##
@@ -581,3 +583,154 @@ function Get-MIMUser
             return $response
 
             }
+            
+ 
+#############################
+#Get MIM Object
+#############################
+ function Get-MIMObject{
+
+ param(
+
+    
+    [Parameter(Mandatory=$true)]
+
+    $ObjectType,
+
+    [Parameter(Mandatory=$true)]
+
+    $xpathquery,
+
+    [Parameter()]
+
+    $Attributes,
+
+    [Parameter(Mandatory=$true)]
+
+    $URL,
+
+    [Parameter(Mandatory=$true)]
+
+    $Credentials,
+
+    [Parameter()]
+
+    [Switch]$Audit
+
+ )
+
+  
+
+##
+
+### IF $XPath switch is used, do this Get-MIMObject function
+
+##
+
+        elseif (-not ([string]::IsNullOrEmpty($xpathquery)))
+
+        {
+
+        $xpath = "$($ObjectType)$($xpathquery)"
+
+#Encodes the xpath query. This is required for this type of query.
+
+        $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
+
+        $query = "?filter=/$($EncodedXpath)"
+
+#Sets the number of items per page. This value should be more than the total number of items retrieved.
+
+        $pages = 1000
+
+        $pagesize = "&pageSize=$($pages)"
+
+#Only stores this variable when the Attributes switch is used
+
+        If (-not ([string]::IsNullOrEmpty($Attributes)))
+
+        {
+
+        $SelectedAttributes = "&attributes=$($Attributes)"
+
+        }
+
+#Build API query
+
+        $ConstructedURL = "$($URL)/v2/resources/$($query)$($pagesize)$($SelectedAttributes)"
+
+        try {
+
+        $mimobjects = Invoke-RestMethod -Uri ($ConstructedURL) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
+
+        If ($mimobject.TotalCount -eq 0)
+
+        {
+
+        Write-Host "Incorrect AccountName or account doesn't exist in MIM"
+
+        }
+
+            }
+
+            catch [System.Management.Automation.RuntimeException]
+
+            {
+
+            Write-host "Either credentials are bad or the URL is incorrect"
+
+            }
+
+
+
+#DO UNTIL Function to handle paging
+
+            $arraylist = [System.Collections.ArrayList]@()
+
+            $arraylist.Add($mimobjects) | Out-Null
+
+            $urlnextpage = $mimobjects.nextpage
+
+        if ($urlnextpage -ne $null)
+
+        {
+
+        do
+
+            {
+
+            $mimobjects = Invoke-RestMethod -uri ($urlnextpage) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
+
+            $arraylist.Add($mimobjects) | Out-Null
+
+            $urlnextpage = $mimobjects.NextPage
+
+            }
+
+                      
+
+        until ($urlnextpage -eq $null)
+
+        }
+
+        
+
+     
+
+            $mimobjectsarray = $arraylist.results
+
+            return $mimobjectsarray
+
+            
+
+        }
+
+        Else
+
+        {
+
+        Write-Host "No valid paramaters found"
+
+        }
+
+}

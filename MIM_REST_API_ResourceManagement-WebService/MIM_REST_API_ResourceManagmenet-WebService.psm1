@@ -1,6 +1,6 @@
 #########################################################################################################
 ##   
-##  MIM_Lithnet_API_Module version 0.5
+##  MIM_Lithnet_API_Module version 0.51
 ##  
 ##  For use with the Lithnet ResourceManagement-WebService
 ##  https://github.com/lithnet/resourcemanagement-webservice/
@@ -9,13 +9,13 @@
 ##  https://github.com/braggaboutme/MIM-Portal-PSModule
 ##
 ##  Changelog:
-##  v0.1 - 1/15/2020 - First Draft Created
-##  v0.2 - 2/24/2020 - Commented out the 'Audit' switch for all commands. Added a do until statement to parse through multiple pages within a large query. Fixed typos and bugs.
+##  v0.10 - 1/15/2020 - First Draft Created
+##  v0.20 - 2/24/2020 - Commented out the 'Audit' switch for all commands. Added a do until statement to parse through multiple pages within a large query. Fixed typos and bugs.
 ##                     Also added the Update-MIMObject commandlet
-##  v0.3 - 2/25/2020 - Added Audit switch back into script
-##  v0.4 - 2/26/2020 - Corrected a typo and added an if statement before the while do loop
-##  v0.5 - 3/27/2020 - Added a Get-MIMObject function to allow querying of custom objects
-##  
+##  v0.30 - 2/25/2020 - Added Audit switch back into script
+##  v0.40 - 2/26/2020 - Corrected a typo and added an if statement before the while do loop
+##  v0.50 - 3/27/2020 - Added a Get-MIMObject function to allow querying of custom objects
+##  v0.51 - 3/28/2020 - Fixed spacing, comments, and added a "Write-Host" statement to "Set-MIMCredentials". Adjusted version numbers to include triple digits. Added example for Get-MIMObject command.
 ##
 #########################################################################################################
 ##
@@ -61,7 +61,8 @@
 ##   Add-MIMOwner -URL https://mim.domain.com:8080 -Credentials $creds -GroupObjectID $ABCGroup.Results.ObjectID -UserObjectID $cbragg.Results.ObjectID
 ##   Remove-MIMMember -URL https://mim.domain.com:8080 -Credentials $creds -GroupObjectID $ABCGroup.Results.ObjectID -UserObjectID $cbragg.Results.ObjectID
 ##   Remove-MIMOwner -URL https://mim.domain.com:8080 -Credentials $creds -GroupObjectID $ABCGroup.Results.ObjectID -UserObjectID $cbragg.Results.ObjectID
-##   Update-MIMObject -ObjectID $userOID -Credentials $creds -url $url -Attribute $attribute -AttributeValue $attributevalue
+##   Update-MIMObject -url https://mim.domain.com:8080 -Credentials $creds -ObjectID $userOID  -Attribute $attribute -AttributeValue $attributevalue
+##   Get-MIMObject -URL https://mim.domain.com:8080 -Credentials $creds -ObjectType "CustomObject" -xpathquery "[(starts-with(CustomAttribute, '%'))]"
 ## 
 ##   Example of a foreach loop
 ##
@@ -81,41 +82,41 @@
 
 #Needed for xpath encoding
 Add-Type -AssemblyName System.Web
-
 #############################
 #Set MIM Credentials Function
 #############################
 #Used to set credentials to authenticate with MIM
 function Set-MIMCredentials
-    {
-
+{
 #Write-Host "Enter the account name to connect to MIM ex: domain\username" -ForegroundColor Yellow
-        $Username = Read-Host "Enter the account name to connect to MIM ex: contoso\username"
-        $password = Read-Host "Enter your Password" -AsSecureString 
+    $Username = Read-Host "Enter the account name to connect to MIM ex: contoso\username"
+    $password = Read-Host "Enter your Password" -AsSecureString 
 #Converts credentials into a secure format that MIM can read
-        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-        $PassWord = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-        $site_auth = "$($Username):$($PassWord)"
-        $site_Bytes = [System.Text.Encoding]::UTF8.GetBytes($site_auth)
+    $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+    $PassWord = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+    $site_auth = "$($Username):$($PassWord)"
+    $site_Bytes = [System.Text.Encoding]::UTF8.GetBytes($site_auth)
 #$Site_EncodedAuth is the variable that is passed to MIM
-        $Site_EncodedAuth = [Convert]::ToBase64String($site_Bytes)
-        $global:Credentials = $Site_EncodedAuth
-        $Credentials
-        Clear-Variable username
-        Clear-Variable password
-        Clear-Variable bstr
-        Clear-Variable Password
-        Clear-Variable site_auth
-        Clear-Variable site_bytes
-        Clear-Variable site_EncodedAuth
-    }
+    $Site_EncodedAuth = [Convert]::ToBase64String($site_Bytes)
+    $global:Credentials = $Site_EncodedAuth
+    $Credentials
+    Clear-Variable username
+    Clear-Variable password
+    Clear-Variable bstr
+    Clear-Variable Password
+    Clear-Variable site_auth
+    Clear-Variable site_bytes
+    Clear-Variable site_EncodedAuth
+#Output message to user
+    Write-Host 'Encoded credentials are stored in the variable $Credentials' -ForegroundColor Yellow
+}
 
 #############################
 #Get MIM User Function
 #############################
 
 function Get-MIMUser
-    {
+{
  param(
     [Parameter()]
     $AccountName,
@@ -123,23 +124,20 @@ function Get-MIMUser
     $xpathquery,
     [Parameter()]
     $Attributes,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $URL,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $Credentials,
     [Parameter()]
     [Switch]$Audit
  )
         $ObjectType = 'Person'
-##
-###If AccountName is used, do this Get-MIMUser Function
-##
-        if (-not ([string]::IsNullOrEmpty($AccountName)))
-        {
-        $xpath = "$($ObjectType)[AccountName='$($AccountName)']"
-        $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
-        $query = "?filter=/$($EncodedXpath)"
-        
+#If AccountName is used, do this Get-MIMUser Function
+    if (-not ([string]::IsNullOrEmpty($AccountName)))
+    {
+    $xpath = "$($ObjectType)[AccountName='$($AccountName)']"
+    $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
+    $query = "?filter=/$($EncodedXpath)"
 #Only stores this variable when the Attributes switch is used
         If (-not ([string]::IsNullOrEmpty($Attributes)))
         {        
@@ -153,75 +151,70 @@ function Get-MIMUser
             return
             }
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        try{
+        try
+        {
         $user = Invoke-RestMethod -Uri ($ConstructedURL) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-        If ($user.TotalCount -eq 0)
-        {
-        Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-        }
-            }
-            catch [System.Management.Automation.RuntimeException]
+            If ($user.TotalCount -eq 0)
             {
-            Write-host "Either credentials are bad or the URL is incorrect"
+            Write-Host "Incorrect AccountName or account doesn't exist in MIM"
             }
-        return $user
         }
-##
-### IF $XPath switch is used, do this Get-MIMUser function
-##
-        elseif (-not ([string]::IsNullOrEmpty($xpathquery)))
+        catch [System.Management.Automation.RuntimeException]
         {
-        $xpath = "$($ObjectType)$($xpathquery)"
+        Write-host "Either credentials are bad or the URL is incorrect"
+        }
+    return $user
+    }
+# IF $XPath switch is used, do this Get-MIMUser function
+    elseif (-not ([string]::IsNullOrEmpty($xpathquery)))
+    {
+    $xpath = "$($ObjectType)$($xpathquery)"
 #Encodes the xpath query. This is required for this type of query.
-        $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
-        $query = "?filter=/$($EncodedXpath)"
+    $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
+    $query = "?filter=/$($EncodedXpath)"
 #Sets the number of items per page. This value should be more than the total number of items retrieved.
-        $pages = 1000
-        $pagesize = "&pageSize=$($pages)"
+    $pages = 1000
+    $pagesize = "&pageSize=$($pages)"
 #Only stores this variable when the Attributes switch is used
         If (-not ([string]::IsNullOrEmpty($Attributes)))
         {
         $SelectedAttributes = "&attributes=$($Attributes)"
         }
 #Build API query
-        $ConstructedURL = "$($URL)/v2/resources/$($query)$($pagesize)$($SelectedAttributes)"
-        try {
+    $ConstructedURL = "$($URL)/v2/resources/$($query)$($pagesize)$($SelectedAttributes)"
+        try
+        {
         $users = Invoke-RestMethod -Uri ($ConstructedURL) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-        If ($users.TotalCount -eq 0)
-        {
-        Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-        }
-            }
-            catch [System.Management.Automation.RuntimeException]
+            If ($users.TotalCount -eq 0)
             {
-            Write-host "Either credentials are bad or the URL is incorrect"
+            Write-Host "Incorrect AccountName or account doesn't exist in MIM"
             }
-            
+        }
+        catch [System.Management.Automation.RuntimeException]
+        {
+        Write-host "Either credentials are bad or the URL is incorrect"
+        }
 #DO UNTIL Function to handle paging
-            $arraylist = [System.Collections.ArrayList]@()
-            $arraylist.Add($users) | Out-Null
-            $urlnextpage = $users.nextpage
-        if ($urlnextpage -ne $null)
-        {
-        do
+        $arraylist = [System.Collections.ArrayList]@()
+        $arraylist.Add($users) | Out-Null
+        $urlnextpage = $users.nextpage
+            if ($urlnextpage -ne $null)
             {
-            $users = Invoke-RestMethod -uri ($urlnextpage) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-            $arraylist.Add($users) | Out-Null
-            $urlnextpage = $users.NextPage
+                do
+                {
+                $users = Invoke-RestMethod -uri ($urlnextpage) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
+                $arraylist.Add($users) | Out-Null
+                $urlnextpage = $users.NextPage
+                }
+                until ($urlnextpage -eq $null)
             }
-                      
-        until ($urlnextpage -eq $null)
-        }
-        
-        
-            $usersarray = $arraylist.results
-            return $usersarray
-                
-        }
-        Else
-        {
-        Write-Host "No valid paramaters found"
-        }
+    $usersarray = $arraylist.results
+    return $usersarray
+    }
+    Else
+    {
+    Write-Host "No valid paramaters found"
+    }
 }
 
 #############################
@@ -229,7 +222,7 @@ function Get-MIMUser
 #############################
 
  function Get-MIMGroup
-    {
+{
  param(
     [Parameter()]
     $AccountName,
@@ -237,24 +230,20 @@ function Get-MIMUser
     $xpathquery,
     [Parameter()]
     $Attributes,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $URL,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $Credentials,
     [Parameter()]
     [Switch]$Audit
  )
         $ObjectType = 'Group'
-##
-###If AccountName is used, do this Get-MIMGroup Function
-##
-        if (-not ([string]::IsNullOrEmpty($AccountName)))
-        {
-        $xpath = "$($ObjectType)[AccountName='$($AccountName)']"
-        $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
-        $query = "?filter=/$($EncodedXpath)"
-        
-        
+#If AccountName is used, do this Get-MIMGroup Function
+    if (-not ([string]::IsNullOrEmpty($AccountName)))
+    {
+    $xpath = "$($ObjectType)[AccountName='$($AccountName)']"
+    $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
+    $query = "?filter=/$($EncodedXpath)"
 #Only stores this variable when the Attributes switch is used
         If (-not ([string]::IsNullOrEmpty($Attributes)))
         {
@@ -263,17 +252,18 @@ function Get-MIMUser
 #Build API query
         $ConstructedURL = "$($URL)/v2/resources/$($query)$($SelectedAttributes)"
         If ($Audit -eq "true")
-            {
-            return $ConstructedURL
-            return
-            }
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        try{
-        $group = Invoke-RestMethod -Uri ($ConstructedURL) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-        If ($group.TotalCount -eq 0)
         {
-        Write-Host "Incorrect AccountName or account doesn't exist in MIM"
+        return $ConstructedURL
+        return
         }
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            try
+            {
+            $group = Invoke-RestMethod -Uri ($ConstructedURL) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
+                If ($group.TotalCount -eq 0)
+                {
+                Write-Host "Incorrect AccountName or account doesn't exist in MIM"
+                }
             }
             catch [System.Management.Automation.RuntimeException]
             {
@@ -287,27 +277,19 @@ function Get-MIMUser
             {
             Write-Host "Could not establish trust relationship for the SSL/TLS secure channel."
             }
-            #catch [System.Management.Automation.ParameterBindingValidationException]
-            #{
-            #Write-Host "The URL or xpath query is incorrect"
-            #}
-            
-
-        return $group
-        }
+    return $group
+    }
         
-##
-### IF $XPath switch is used, do this Get-MIMUser function
-##
-        elseif (-not ([string]::IsNullOrEmpty($xpathquery)))
-        {
-        $xpath = "$($ObjectType)$($xpathquery)"
+# IF $XPath switch is used, do this Get-MIMUser function
+    elseif (-not ([string]::IsNullOrEmpty($xpathquery)))
+    {
+    $xpath = "$($ObjectType)$($xpathquery)"
 #Encodes the xpath query. This is required for this type of query.
-        $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
-        $query = "?filter=/$($EncodedXpath)"
+    $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
+    $query = "?filter=/$($EncodedXpath)"
 #Sets the number of items per page. This value should be more than the total number of items retrieved.
-        $pages = 1000
-        $pagesize = "&pageSize=$($pages)"
+    $pages = 1000
+    $pagesize = "&pageSize=$($pages)"
 #Only stores this variable when the Attributes switch is used
         If (-not ([string]::IsNullOrEmpty($Attributes)))
         {
@@ -315,64 +297,60 @@ function Get-MIMUser
         }
 #Build API query
         $ConstructedURL = "$($URL)/v2/resources/$($query)$($pagesize)$($SelectedAttributes)"
-        try {
-        $groups = Invoke-RestMethod -Uri ($ConstructedURL) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-        If ($group.TotalCount -eq 0)
+        try
         {
-        Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-        }
-            }
-            catch [System.Management.Automation.RuntimeException]
+        $groups = Invoke-RestMethod -Uri ($ConstructedURL) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
+            If ($group.TotalCount -eq 0)
             {
-            Write-host "Either credentials are bad or the URL is incorrect"
+            Write-Host "Incorrect AccountName or account doesn't exist in MIM"
             }
+        }
+        catch [System.Management.Automation.RuntimeException]
+        {
+        Write-host "Either credentials are bad or the URL is incorrect"
+        }
 
 #DO UNTIL Function to handle paging
-            $arraylist = [System.Collections.ArrayList]@()
-            $arraylist.Add($groups) | Out-Null
-            $urlnextpage = $groups.nextpage
+        $arraylist = [System.Collections.ArrayList]@()
+        $arraylist.Add($groups) | Out-Null
+        $urlnextpage = $groups.nextpage
         if ($urlnextpage -ne $null)
         {
-        do
+            do
             {
             $groups = Invoke-RestMethod -uri ($urlnextpage) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
             $arraylist.Add($groups) | Out-Null
             $urlnextpage = $groups.NextPage
             }
-                      
-        until ($urlnextpage -eq $null)
+            until ($urlnextpage -eq $null)
         }
-        
-     
-            $groupsarray = $arraylist.results
-            return $groupsarray
-            
-        }
-        Else
-        {
-        Write-Host "No valid paramaters found"
-        }
+        $groupsarray = $arraylist.results
+        return $groupsarray
+    }
+    Else
+    {
+    Write-Host "No valid paramaters found"
+    }
 }
 
 #############################
 #Add MIM Owner Function
 #############################
 
- function Add-MIMOwner{
+ function Add-MIMOwner
+ {
  param(
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $GroupObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $UserObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $URL,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $Credentials,
     [Parameter()]
     [Switch]$Audit
  )
-    
-    
 #$APIURLGroup = "https://mim.domain.com:8080/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Owner/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
             $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Owner/$($UserObjectID)/"
             If ($Audit -eq "true")
@@ -381,155 +359,149 @@ function Get-MIMUser
             return
             }
             #Invoke-WebRequest -Uri $APIURLGroup -Headers @{Authorization = "Basic $Site_EncodedAuth"} -ContentType "application/json" -UseBasicParsing -Method DELETE
-            try {
-            $user = Invoke-RestMethod -Uri ($ConstructedURL) -Method PUT -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-            If ($user.TotalCount -eq 0)
-            {
-            Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-            }
+                try
+                {
+                $user = Invoke-RestMethod -Uri ($ConstructedURL) -Method PUT -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
+                    If ($user.TotalCount -eq 0)
+                    {
+                    Write-Host "Incorrect AccountName or account doesn't exist in MIM"
+                    }
                 }
-            catch [System.Management.Automation.RuntimeException]
-            {
-            Write-host "Either credentials are bad or the URL is incorrect"
-            }
-            catch [System.Net.WebException]
-            {
-            Write-host "ERROR: Web Exception. The resource might be in an errored state."
-            }
-
+                catch [System.Management.Automation.RuntimeException]
+                {
+                Write-host "Either credentials are bad or the URL is incorrect"
+                }
+                catch [System.Net.WebException]
+                {
+                Write-host "ERROR: Web Exception. The resource might be in an errored state."
+                }
             return $user
-
-            }
+}
  
 #############################
 #Remove MIM Owner Function
 #############################
 
- function Remove-MIMOwner{
+ function Remove-MIMOwner
+ {
  param(
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $GroupObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $UserObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $URL,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $Credentials,
     [Parameter()]
     [Switch]$Audit
  )
-    
-    
 #$APIURLGroup = "https://mim.domain.com:8080/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Owner/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
             $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Owner/$($UserObjectID)/"
-            
             If ($Audit -eq "true")
             {
             return $ConstructedURL
             return
             }
             #Invoke-WebRequest -Uri $APIURLGroup -Headers @{Authorization = "Basic $Site_EncodedAuth"} -ContentType "application/json" -UseBasicParsing -Method DELETE
-            try {
-            $user = Invoke-RestMethod -Uri ($ConstructedURL) -Method DELETE -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-            If ($user.TotalCount -eq 0)
-            {
-            Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-            }
+                try
+                {
+                $user = Invoke-RestMethod -Uri ($ConstructedURL) -Method DELETE -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
+                    If ($user.TotalCount -eq 0)
+                    {
+                    Write-Host "Incorrect AccountName or account doesn't exist in MIM"
+                    }
                 }
-            catch [System.Management.Automation.RuntimeException]
-            {
-            Write-host "Either credentials are bad or the URL is incorrect"
-            }
-
+                catch [System.Management.Automation.RuntimeException]
+                {
+                Write-host "Either credentials are bad or the URL is incorrect"
+                }
             return $user
-
-            }
+}
  
 #############################
 #Add MIM Member Function
 #############################
 
- function Add-MIMMember{
+ function Add-MIMMember
+ {
  param(
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $GroupObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $UserObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $URL,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $Credentials,
     [Parameter()]
     [Switch]$Audit
  )
-    
-    
 #$APIURLGroup = "https://mim.domain.com:8080/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Manually-ManagedMembership/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
-            $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Manually-ManagedMembership/$($UserObjectID)/"
-            If ($Audit -eq "true")
+        $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Manually-ManagedMembership/$($UserObjectID)/"
+        If ($Audit -eq "true")
+        {
+        return $ConstructedURL
+        return
+        }
+        #Invoke-WebRequest -Uri $APIURLGroup -Headers @{Authorization = "Basic $Site_EncodedAuth"} -ContentType "application/json" -UseBasicParsing -Method DELETE
+            try
             {
-            return $ConstructedURL
-            return
-            }
-            #Invoke-WebRequest -Uri $APIURLGroup -Headers @{Authorization = "Basic $Site_EncodedAuth"} -ContentType "application/json" -UseBasicParsing -Method DELETE
-            try {
             $user = Invoke-RestMethod -Uri ($ConstructedURL) -Method PUT -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-            If ($user.TotalCount -eq 0)
-            {
-            Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-            }
+                If ($user.TotalCount -eq 0)
+                {
+                Write-Host "Incorrect AccountName or account doesn't exist in MIM"
                 }
+            }
             catch [System.Management.Automation.RuntimeException] 
             {
             Write-host "Either credentials are bad or the URL is incorrect"
             }
-
-            return $user
-
-            }
+        return $user
+}
 
 #############################
 #Remove MIM Member Function
 #############################
 
- function Remove-MIMMember{
+ function Remove-MIMMember
+ {
  param(
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $GroupObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $UserObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $URL,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $Credentials,
     [Parameter()]
     [Switch]$Audit
  )
     
-    
 #$APIURLGroup = "https://mim.domain.com:8080/v2/resources/a1c6ab78-c6bc-4595-94fd-2670a3a6182b/Manually-ManagedMembership/294b958b-1a38-4afe-a74b-de53b4e1c2ff/"
-            $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Manually-ManagedMembership/$($UserObjectID)/"
-            If ($Audit -eq "true")
+        $ConstructedURL = "$($URL)/v2/resources/$($GroupObjectID)/Manually-ManagedMembership/$($UserObjectID)/"
+        If ($Audit -eq "true")
+        {
+        return $ConstructedURL
+        return
+        }
+        #Invoke-WebRequest -Uri $APIURLGroup -Headers @{Authorization = "Basic $Site_EncodedAuth"} -ContentType "application/json" -UseBasicParsing -Method DELETE
+            try
             {
-            return $ConstructedURL
-            return
-            }
-            #Invoke-WebRequest -Uri $APIURLGroup -Headers @{Authorization = "Basic $Site_EncodedAuth"} -ContentType "application/json" -UseBasicParsing -Method DELETE
-            try {
             $user = Invoke-RestMethod -Uri ($ConstructedURL) -Method DELETE -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-            If ($user.TotalCount -eq 0)
-            {
-            Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-            }
+                If ($user.TotalCount -eq 0)
+                {
+                Write-Host "Incorrect AccountName or account doesn't exist in MIM"
                 }
+            }
+            
             catch [System.Management.Automation.RuntimeException] 
             {
             Write-host "Either credentials are bad or the URL is incorrect"
             }
-
-            return $user
-
-            }
+        return $user
+}
  
 
 
@@ -537,200 +509,114 @@ function Get-MIMUser
 #Update MIM Object
 #############################
 
- function Update-MIMObject{
+ function Update-MIMObject
+ {
  param(
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $ObjectID,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $URL,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $Credentials,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $Attribute,
-    [Parameter()]
+    [Parameter(Mandatory=$true)]
     $AttributeValue,
     [Parameter()]
     [Switch]$Audit
  )
-    
-    
-            $ConstructedURL = "$($URL)/v2/resources/$($ObjectID)/"
-            $body = @{
-
-            $($Attribute)="$AttributeValue"
-            
-            }
-
-            $jsonbody = $body | ConvertTo-Json
-
-            If ($Audit.IsPresent)
+        $ConstructedURL = "$($URL)/v2/resources/$($ObjectID)/"
+        $body = @{
+        $($Attribute)="$AttributeValue"
+        }
+        $jsonbody = $body | ConvertTo-Json
+        If ($Audit.IsPresent)
+        {
+        return $ConstructedURL
+        return
+        }
+            try
             {
-            return $ConstructedURL
-            return
-            }
-            try {
             $response = Invoke-RestMethod -Uri ($ConstructedURL) -Method PATCH -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json" -Body $jsonbody
-            If ($response.TotalCount -eq 0)
-            {
-            Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-            }
+                If ($response.TotalCount -eq 0)
+                {
+                Write-Host "Incorrect AccountName or account doesn't exist in MIM"
                 }
+            }
+            
             catch [System.Management.Automation.RuntimeException] 
             {
             Write-host "Either credentials are bad or the URL is incorrect"
             }
-
-            return $response
-
-            }
-            
+        return $response
+}
  
 #############################
 #Get MIM Object
 #############################
- function Get-MIMObject{
-
+ function Get-MIMObject
+ {
  param(
-
-    
-    [Parameter(Mandatory=$true)]
-
-    $ObjectType,
-
-    [Parameter(Mandatory=$true)]
-
-    $xpathquery,
-
-    [Parameter()]
-
-    $Attributes,
-
-    [Parameter(Mandatory=$true)]
-
-    $URL,
-
-    [Parameter(Mandatory=$true)]
-
-    $Credentials,
-
-    [Parameter()]
-
-    [Switch]$Audit
-
- )
-
-  
-
-##
-
-### IF $XPath switch is used, do this Get-MIMObject function
-
-##
-
-        elseif (-not ([string]::IsNullOrEmpty($xpathquery)))
-
-        {
-
+     [Parameter(Mandatory=$true)]
+     $ObjectType,
+     [Parameter(Mandatory=$true)]
+     $xpathquery,
+     [Parameter()]
+     $Attributes,
+     [Parameter(Mandatory=$true)]
+     $URL,
+     [Parameter(Mandatory=$true)]
+     $Credentials,
+     [Parameter()]
+     [Switch]$Audit
+)
+# IF $XPath switch is used, do this Get-MIMObject function
+    elseif (-not ([string]::IsNullOrEmpty($xpathquery)))
+    {
         $xpath = "$($ObjectType)$($xpathquery)"
-
 #Encodes the xpath query. This is required for this type of query.
-
         $EncodedXPath = [System.Web.HttpUtility]::UrlEncode($xpath.tostring())
-
         $query = "?filter=/$($EncodedXpath)"
-
 #Sets the number of items per page. This value should be more than the total number of items retrieved.
-
         $pages = 1000
-
         $pagesize = "&pageSize=$($pages)"
-
 #Only stores this variable when the Attributes switch is used
-
         If (-not ([string]::IsNullOrEmpty($Attributes)))
-
         {
-
         $SelectedAttributes = "&attributes=$($Attributes)"
-
         }
-
 #Build API query
-
         $ConstructedURL = "$($URL)/v2/resources/$($query)$($pagesize)$($SelectedAttributes)"
-
         try {
-
         $mimobjects = Invoke-RestMethod -Uri ($ConstructedURL) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-
         If ($mimobject.TotalCount -eq 0)
-
         {
-
-        Write-Host "Incorrect AccountName or account doesn't exist in MIM"
-
+        Write-Host "Incorrect XPath or object doesn't exist in MIM"
         }
-
             }
-
             catch [System.Management.Automation.RuntimeException]
-
             {
-
             Write-host "Either credentials are bad or the URL is incorrect"
-
             }
-
-
-
 #DO UNTIL Function to handle paging
-
             $arraylist = [System.Collections.ArrayList]@()
-
             $arraylist.Add($mimobjects) | Out-Null
-
             $urlnextpage = $mimobjects.nextpage
-
         if ($urlnextpage -ne $null)
-
         {
-
-        do
-
+            do
             {
-
             $mimobjects = Invoke-RestMethod -uri ($urlnextpage) -Method Get -Headers @{Authorization = "Basic $Credentials"} -ContentType "application/json"
-
             $arraylist.Add($mimobjects) | Out-Null
-
             $urlnextpage = $mimobjects.NextPage
-
             }
-
-                      
-
-        until ($urlnextpage -eq $null)
-
-        }
-
-        
-
-     
-
-            $mimobjectsarray = $arraylist.results
-
-            return $mimobjectsarray
-
-            
-
-        }
-
+                until ($urlnextpage -eq $null)
+                }
+                $mimobjectsarray = $arraylist.results
+                return $mimobjectsarray
+                }
         Else
-
         {
-
         Write-Host "No valid paramaters found"
-
         }
-
 }
